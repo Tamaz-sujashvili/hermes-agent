@@ -172,20 +172,34 @@ def build_models_payload(
         _is_aggregator = None  # type: ignore[assignment]
 
     if _is_aggregator is not None:
-        user_models: set[str] = set()
         for row in rows:
-            if row.get("is_user_defined"):
-                user_models.update(m.lower() for m in (row.get("models") or []))
-        if user_models:
-            for row in rows:
-                slug = row.get("slug", "")
-                if not _is_aggregator(slug):
+            slug = str(row.get("slug", "") or "")
+            if not slug or not _is_aggregator(slug):
+                continue
+            original = row.get("models") or []
+            if not original:
+                continue
+            # Only dedupe against *other* user-defined providers. Canonical
+            # providers configured via providers: (e.g. opencode-zen) are
+            # marked is_user_defined but must not compete with themselves —
+            # that erased every model and hid the row from GUI pickers (#45954).
+            slug_lower = slug.lower()
+            competing_models: set[str] = set()
+            for other in rows:
+                if not other.get("is_user_defined"):
                     continue
-                original = row.get("models") or []
-                filtered = [m for m in original if m.lower() not in user_models]
-                if len(filtered) < len(original):
-                    row["models"] = filtered
-                    row["total_models"] = len(filtered)
+                other_slug = str(other.get("slug", "") or "").lower()
+                if not other_slug or other_slug == slug_lower:
+                    continue
+                competing_models.update(
+                    m.lower() for m in (other.get("models") or [])
+                )
+            if not competing_models:
+                continue
+            filtered = [m for m in original if m.lower() not in competing_models]
+            if len(filtered) < len(original):
+                row["models"] = filtered
+                row["total_models"] = len(filtered)
 
     if include_unconfigured:
         rows = list(rows) + _append_unconfigured_rows(rows, ctx)

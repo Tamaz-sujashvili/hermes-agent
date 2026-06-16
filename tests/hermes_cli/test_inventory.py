@@ -606,3 +606,42 @@ def test_aggregator_dedup_multiple_user_providers():
     assert or_row["models"] == ["model-z"]
     assert or_row["total_models"] == 1
 
+
+def test_aggregator_dedup_does_not_strip_self_configured_provider():
+    """providers:-configured canonical aggregators (e.g. opencode-zen) must
+    not dedupe against their own model list — that left zero models in GUI
+    pickers while the backend still worked."""
+    rows = [
+        _user_provider_row("opencode-zen", [
+            "deepseek-v4-flash",
+            "glm-5",
+            "kimi-k2.6",
+        ]),
+    ]
+    ctx = _empty_ctx()
+    with _list_auth_returning(rows):
+        payload = build_models_payload(ctx)
+
+    zen_row = next(r for r in payload["providers"] if r["slug"] == "opencode-zen")
+    assert zen_row["models"] == ["deepseek-v4-flash", "glm-5", "kimi-k2.6"]
+    assert zen_row["total_models"] == 3
+
+
+def test_aggregator_dedup_still_dedupes_across_distinct_providers():
+    """Cross-provider overlap dedup remains: opencode-go loses models that
+    opencode-zen already exposes via providers: config."""
+    rows = [
+        _user_provider_row("opencode-zen", ["deepseek-v4-flash", "glm-5"]),
+        _aggregator_row("opencode-go", [
+            "deepseek-v4-flash",
+            "kimi-k2.6",
+        ]),
+    ]
+    ctx = _empty_ctx()
+    with _list_auth_returning(rows):
+        payload = build_models_payload(ctx)
+
+    go_row = next(r for r in payload["providers"] if r["slug"] == "opencode-go")
+    assert go_row["models"] == ["kimi-k2.6"]
+    assert go_row["total_models"] == 1
+
