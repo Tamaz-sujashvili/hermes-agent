@@ -72,6 +72,7 @@ from gateway.platforms.base import (
     MessageType,
     ProcessingOutcome,
     SendResult,
+    classify_send_error,
     cache_image_from_bytes,
     cache_audio_from_bytes,
     cache_video_from_bytes,
@@ -80,6 +81,7 @@ from gateway.platforms.base import (
     SUPPORTED_VIDEO_TYPES,
     SUPPORTED_DOCUMENT_TYPES,
     SUPPORTED_IMAGE_DOCUMENT_TYPES,
+    _TEXT_INJECT_EXTENSIONS,
     utf16_len,
 )
 from plugins.platforms.telegram.telegram_network import (
@@ -2516,11 +2518,17 @@ class TelegramAdapter(BasePlatformAdapter):
                 rich_result = await self._try_send_rich(chat_id, content, reply_to, metadata)
                 if rich_result is not None:
                     if rich_result.success:
-                        # Re-trigger typing like the legacy success path does.
-                        try:
-                            await self.send_typing(chat_id, metadata=metadata)
-                        except Exception:
-                            pass  # Typing failures are non-fatal
+                        # Re-trigger typing like the legacy success path does,
+                        # but ONLY for intermediate sends. On the final reply
+                        # (metadata["notify"]) the gateway has already torn down
+                        # the typing refresh loop; re-arming Telegram's ~5s timer
+                        # here would leave the "...typing" bubble lingering after
+                        # the answer (no Bot API call cancels it). See #48678.
+                        if not (metadata or {}).get("notify"):
+                            try:
+                                await self.send_typing(chat_id, metadata=metadata)
+                            except Exception:
+                                pass  # Typing failures are non-fatal
                     return rich_result
 
             # Format and split message if needed
@@ -2745,10 +2753,16 @@ class TelegramAdapter(BasePlatformAdapter):
             # so without this the "...typing" bubble disappears mid-response
             # (especially noticeable when the agent sends intermediate progress
             # messages like "Checking:" before running tools).
-            try:
-                await self.send_typing(chat_id, metadata=metadata)
-            except Exception:
-                pass  # Typing failures are non-fatal
+            # Skip this on the FINAL reply (metadata["notify"]): the gateway has
+            # already cancelled the typing refresh loop by the time the final
+            # send returns, so re-arming Telegram's ~5s timer here would leave
+            # the indicator lingering after the answer with nothing to cancel
+            # it (Telegram exposes no stop-typing API). See #48678.
+            if not (metadata or {}).get("notify"):
+                try:
+                    await self.send_typing(chat_id, metadata=metadata)
+                except Exception:
+                    pass  # Typing failures are non-fatal
 
             return SendResult(
                 success=True,
@@ -2763,6 +2777,7 @@ class TelegramAdapter(BasePlatformAdapter):
         except Exception as e:
             logger.error("[%s] Failed to send Telegram message: %s", self.name, e, exc_info=True)
             err_str = str(e).lower()
+            error_kind = classify_send_error(e)
             # Message too long — content exceeded 4096 chars. Return failure so
             # stream consumer enters fallback mode and sends the remainder.
             if "message_too_long" in err_str or "too long" in err_str:
@@ -2770,7 +2785,7 @@ class TelegramAdapter(BasePlatformAdapter):
                     "[%s] send() content too long, falling back to new-message continuation",
                     self.name,
                 )
-                return SendResult(success=False, error="message_too_long")
+                return SendResult(success=False, error="message_too_long", error_kind="too_long")
             # TimedOut usually means the request may have reached Telegram —
             # mark as non-retryable so _send_with_retry() doesn't re-send.
             # Exceptions: a wrapped ConnectTimeout (no connection established)
@@ -2780,7 +2795,12 @@ class TelegramAdapter(BasePlatformAdapter):
             is_timeout = (_to and isinstance(e, _to)) or "timed out" in err_str
             is_connect_timeout = self._looks_like_connect_timeout(e)
             is_pool_timeout = self._looks_like_pool_timeout(e)
-            return SendResult(success=False, error=str(e), retryable=(is_connect_timeout or is_pool_timeout or not is_timeout))
+            return SendResult(
+                success=False,
+                error=str(e),
+                retryable=(is_connect_timeout or is_pool_timeout or not is_timeout),
+                error_kind=error_kind,
+            )
 
     async def send_or_update_status(
         self,
@@ -5841,8 +5861,11 @@ class TelegramAdapter(BasePlatformAdapter):
             return
 
         if cached is None:
+            # Only reachable for images that fail validation now — any other
+            # file type is always cached (authorization is the gate, not the
+            # extension).
             event.text = self._append_observed_note(
-                event.text, "[Observed Telegram attachment: unsupported type, not cached.]"
+                event.text, "[Observed Telegram attachment could not be read, not cached.]"
             )
             return
 
@@ -6507,33 +6530,30 @@ class TelegramAdapter(BasePlatformAdapter):
                 # ext-in-SUPPORTED_IMAGE_DOCUMENT_TYPES branch would be dead
                 # code — the extension sets are identical.
 
-                # Check if supported
-                if ext not in SUPPORTED_DOCUMENT_TYPES:
-                    supported_list = ", ".join(sorted(SUPPORTED_DOCUMENT_TYPES.keys()))
-                    event.text = (
-                        f"Unsupported document type '{ext or 'unknown'}'. "
-                        f"Supported types: {supported_list}"
-                    )
-                    logger.info("[Telegram] Unsupported document type: %s", ext or "unknown")
-                    await self.handle_message(event)
-                    return
-
-                # Download and cache
+                # Download and cache. Any file type is accepted — authorization
+                # to message the agent is the gate, not the file extension.
+                # Known types keep their precise MIME; unknown types are tagged
+                # application/octet-stream so the agent reaches for terminal tools.
                 file_obj = await doc.get_file()
                 doc_bytes = await file_obj.download_as_bytearray()
                 raw_bytes = bytes(doc_bytes)
-                cached_path = cache_document_from_bytes(raw_bytes, original_filename or f"document{ext}")
-                mime_type = SUPPORTED_DOCUMENT_TYPES[ext]
+                cached_path = cache_document_from_bytes(raw_bytes, original_filename or f"document{ext or '.bin'}")
+                mime_type = SUPPORTED_DOCUMENT_TYPES.get(ext) or doc.mime_type or "application/octet-stream"
                 event.media_urls = [cached_path]
                 event.media_types = [mime_type]
-                logger.info("[Telegram] Cached user document at %s", cached_path)
+                logger.info("[Telegram] Cached user document at %s (%s)", cached_path, mime_type)
 
-                # For text files, inject content into event.text (capped at 100 KB)
+                # For text-readable files, inject content into event.text (capped
+                # at 100 KB). Gate on a text-like extension/MIME — NOT a blind
+                # UTF-8 decode, since binary formats (PDF/zip/docx) can have
+                # decodable ASCII headers. Binary files are surfaced as a cached
+                # path only (run.py emits a path-pointing context note).
                 MAX_TEXT_INJECT_BYTES = 100 * 1024
-                if ext in {".md", ".txt"} and len(raw_bytes) <= MAX_TEXT_INJECT_BYTES:
+                _is_text = ext in _TEXT_INJECT_EXTENSIONS or (doc_mime or "").startswith("text/")
+                if _is_text and len(raw_bytes) <= MAX_TEXT_INJECT_BYTES:
                     try:
                         text_content = raw_bytes.decode("utf-8")
-                        display_name = original_filename or f"document{ext}"
+                        display_name = original_filename or f"document{ext or '.txt'}"
                         display_name = re.sub(r'[^\w.\- ]', '_', display_name)
                         injection = f"[Content of {display_name}]:\n{text_content}"
                         if event.text:
@@ -6541,10 +6561,9 @@ class TelegramAdapter(BasePlatformAdapter):
                         else:
                             event.text = injection
                     except UnicodeDecodeError:
-                        logger.warning(
-                            "[Telegram] Could not decode text file as UTF-8, skipping content injection",
-                            exc_info=True,
-                        )
+                        # Binary file — agent has the cached path and can use
+                        # terminal/read_file against it. No inline injection.
+                        pass
 
             except Exception as e:
                 logger.warning("[Telegram] Failed to cache document: %s", e, exc_info=True)

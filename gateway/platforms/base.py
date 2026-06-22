@@ -1249,6 +1249,33 @@ SUPPORTED_DOCUMENT_TYPES = {
 
 
 # ---------------------------------------------------------------------------
+# Text-injection extension allowlist
+#
+# Files whose contents are safe to inline into the prompt (UTF-8 text) when
+# small enough. This is intentionally an extension/MIME gate, NOT a blind
+# UTF-8 decode: binary formats like PDF/zip/docx can begin with decodable
+# ASCII headers and must never be inlined. Any uploaded file is still cached
+# and surfaced to the agent regardless of whether it lands in this set —
+# this only controls inline-vs-path-pointer for the prompt.
+# ---------------------------------------------------------------------------
+
+_TEXT_INJECT_EXTENSIONS = {
+    ".txt", ".md", ".markdown", ".csv", ".tsv", ".log",
+    ".json", ".jsonl", ".ndjson", ".xml", ".yaml", ".yml", ".toml",
+    ".ini", ".cfg", ".conf", ".env", ".properties",
+    ".html", ".htm", ".css", ".scss", ".sass", ".less",
+    ".py", ".pyi", ".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx",
+    ".sh", ".bash", ".zsh", ".fish", ".ps1", ".bat",
+    ".c", ".h", ".cpp", ".cc", ".hpp", ".cs", ".java", ".kt",
+    ".go", ".rs", ".rb", ".php", ".pl", ".lua", ".r", ".jl",
+    ".swift", ".m", ".scala", ".clj", ".ex", ".exs", ".erl",
+    ".sql", ".graphql", ".proto", ".tf", ".hcl",
+    ".dockerfile", ".makefile", ".cmake", ".gradle",
+    ".rst", ".tex", ".srt", ".vtt", ".diff", ".patch",
+}
+
+
+# ---------------------------------------------------------------------------
 # Image document types
 #
 # Image extensions that platforms may deliver as "documents" rather than
@@ -1454,9 +1481,10 @@ def cache_media_bytes(
 
     ``default_kind`` ("image"/"video"/"audio"/"document") biases classification
     when the extension/MIME are ambiguous — e.g. a Telegram native photo whose
-    file has no usable name. Unsupported document types return None so the
-    caller can record an "unsupported" note. Images that fail validation
-    (``cache_image_from_bytes`` raises ValueError) also return None.
+    file has no usable name. Any non-image/video/audio file is cached as a
+    document and surfaced to the agent (arbitrary types get
+    ``application/octet-stream``); only images that fail validation
+    (``cache_image_from_bytes`` raises ValueError) return None.
     """
     from tools.credential_files import to_agent_visible_cache_path
 
@@ -1492,11 +1520,20 @@ def cache_media_bytes(
         out_mime = mime if mime.startswith("audio/") else f"audio/{aud_ext.lstrip('.')}"
         return CachedMedia(to_agent_visible_cache_path(path), out_mime, "audio", display)
 
-    if ext not in SUPPORTED_DOCUMENT_TYPES:
-        return None
-
-    path = cache_document_from_bytes(data, filename or f"document{ext}")
-    return CachedMedia(to_agent_visible_cache_path(path), SUPPORTED_DOCUMENT_TYPES[ext], "document", display or f"document{ext}")
+    # Any other file type is cached and surfaced to the agent as a local path
+    # so it can be inspected with terminal / read_file / etc. Authorization to
+    # talk to the agent is the gate that matters — once a user is allowed to
+    # message it, the file-extension allowlist must not silently drop their
+    # uploads. Known extensions keep their precise MIME; everything else is
+    # tagged application/octet-stream (or the caller-supplied MIME) so the
+    # agent knows it's an arbitrary file and reaches for terminal tools.
+    fallback_name = filename or (f"document{ext}" if ext else "document.bin")
+    path = cache_document_from_bytes(data, fallback_name)
+    if ext in SUPPORTED_DOCUMENT_TYPES:
+        out_mime = SUPPORTED_DOCUMENT_TYPES[ext]
+    else:
+        out_mime = mime if mime else "application/octet-stream"
+    return CachedMedia(to_agent_visible_cache_path(path), out_mime, "document", display or fallback_name)
 
 
 class MessageType(Enum):
@@ -1674,6 +1711,105 @@ class SendResult:
     # made up the full payload, in send order.  Empty tuple for the common
     # single-message case.
     continuation_message_ids: tuple = ()
+    # Machine-readable failure category (set only when ``success`` is False).
+    # ``error`` stays the human-readable detail string; ``error_kind`` lets
+    # consumers branch deterministically instead of substring-matching the raw
+    # provider message.  One of the values in :data:`SEND_ERROR_KINDS` or
+    # ``None`` (unset / not classified).  Producers should set this via
+    # :func:`classify_send_error`.
+    error_kind: Optional[str] = None
+
+
+# Machine-readable send-failure categories.  Kept platform-neutral so every
+# adapter can populate ``SendResult.error_kind`` from the same vocabulary and
+# the gateway can decide — once, in one place — whether a failure is worth
+# surfacing to the user.
+#
+#   too_long      content exceeded the platform's per-message size cap; the
+#                 adapter typically recovers via continuation/split, so this is
+#                 informational rather than a hard failure.
+#   bad_format    the platform rejected the message markup/entities (parse
+#                 error); a plain-text retry is the actionable fix.
+#   forbidden     the bot is blocked, kicked, or lacks permission to post to the
+#                 target — the bot CANNOT reach the user, so there is nowhere to
+#                 surface a notice.
+#   not_found     the target chat/thread/message no longer exists.
+#   rate_limited  the platform throttled the send (flood control).
+#   transient     a connection-level failure that is safe to retry.
+#   unknown       classification did not match any known shape.
+SEND_ERROR_KINDS = frozenset(
+    {
+        "too_long",
+        "bad_format",
+        "forbidden",
+        "not_found",
+        "rate_limited",
+        "transient",
+        "unknown",
+    }
+)
+
+
+def classify_send_error(exc: Optional[BaseException], error_text: str = "") -> str:
+    """Map a send exception / error string to a :data:`SEND_ERROR_KINDS` value.
+
+    Platform-neutral: matches on the lowercased text of ``exc`` (and/or the
+    explicit ``error_text``) against the substrings the major messaging APIs
+    use.  Conservative — anything unrecognized returns ``"unknown"`` so callers
+    never mistake an unclassified failure for a benign one.
+    """
+    parts = []
+    if error_text:
+        parts.append(error_text)
+    if exc is not None:
+        parts.append(str(exc))
+        parts.append(exc.__class__.__name__)
+    blob = " ".join(parts).lower()
+    if not blob.strip():
+        return "unknown"
+    if "message_too_long" in blob or "too long" in blob or "message is too long" in blob:
+        return "too_long"
+    if (
+        "can't parse entities" in blob
+        or "cant parse entities" in blob
+        or "can't find end" in blob
+        or "unsupported start tag" in blob
+        or ("entity" in blob and "parse" in blob)
+        or ("bad request" in blob and "entit" in blob)
+    ):
+        return "bad_format"
+    if (
+        "forbidden" in blob
+        or "bot was blocked" in blob
+        or "blocked by the user" in blob
+        or "user is deactivated" in blob
+        or "not enough rights" in blob
+        or "have no rights" in blob
+        or "not a member" in blob
+    ):
+        return "forbidden"
+    if (
+        "chat not found" in blob
+        or "message to edit not found" in blob
+        or "message to reply not found" in blob
+        or "thread not found" in blob
+        or "topic_deleted" in blob
+        or "message_id_invalid" in blob
+    ):
+        return "not_found"
+    if (
+        "flood" in blob
+        or "too many requests" in blob
+        or "retry after" in blob
+        or "rate limit" in blob
+    ):
+        return "rate_limited"
+    for pat in _RETRYABLE_ERROR_PATTERNS:
+        if pat in blob:
+            return "transient"
+    if "connecttimeout" in blob:
+        return "transient"
+    return "unknown"
 
 
 class EphemeralReply(str):
@@ -1924,6 +2060,22 @@ class BasePlatformAdapter(ABC):
     # first code line).  Plain-text platforms fall back to the short truncated
     # preview (see gateway/run.py progress_callback).
     supports_code_blocks: bool = False
+
+    # Whether this adapter can deliver an ASYNC notification back to the agent
+    # AFTER a turn ends — i.e. wake a fresh turn to surface a background
+    # process completion (terminal notify_on_complete / watch_patterns) or a
+    # detached subagent result (delegate_task background=True).
+    #
+    # True for adapters that hold a persistent outbound channel (Telegram,
+    # Discord, Slack, ... — they have a real ``send()`` and the gateway runs
+    # the watcher/drain loops). False for stateless request/response adapters
+    # (the API server): every route closes its channel when the turn ends, so
+    # there is nowhere to push a later completion. The gateway propagates this
+    # into the ``HERMES_SESSION_ASYNC_DELIVERY`` contextvar at session-bind
+    # time; tools read it via ``async_delivery_supported()`` and refuse to make
+    # a delivery promise they can't keep. A new stateless adapter only needs to
+    # set this to False to stay correct-by-default.
+    supports_async_delivery: bool = True
 
     # The command prefix users can always TYPE on this platform to reach
     # Hermes commands.  Default "/" (most platforms deliver "/approve" etc.
