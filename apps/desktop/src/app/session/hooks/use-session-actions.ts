@@ -175,6 +175,18 @@ function reconcileResumeMessages(nextMessages: ChatMessage[], previousMessages: 
   })
 }
 
+interface BranchMessage {
+  content: string
+  role: ChatMessage['role']
+  source: ChatMessage
+}
+
+// The copyable spine of a branch: user/assistant turns that carry text.
+const toBranchMessages = (messages: ChatMessage[]): BranchMessage[] =>
+  messages
+    .map(message => ({ content: chatMessageText(message), role: message.role, source: message }))
+    .filter(({ content, role }) => content.trim() && (role === 'assistant' || role === 'user'))
+
 function upsertOptimisticSession(
   created: SessionCreateResponse,
   id: string,
@@ -917,14 +929,14 @@ export function useSessionActions({
           cols: 96,
           ...(cwd && { cwd }),
           messages: branchMessages.map(({ content, role }) => ({ content, role })),
-          title: copy.branchTitle
+          title: copy.branchTitle(branchMessages.length)
         })
 
         const routedSessionId = branched.stored_session_id ?? branched.session_id
         const preview = branchMessages.map(({ content }) => content).find(Boolean) ?? null
 
         setFreshDraftReady(false)
-        upsertOptimisticSession(branched, routedSessionId, copy.branchTitle, preview)
+        upsertOptimisticSession(branched, routedSessionId, copy.branchTitle(branchMessages.length), preview)
         ensureSessionState(branched.session_id, routedSessionId)
         setActiveSessionId(branched.session_id)
         activeSessionIdRef.current = branched.session_id
@@ -1102,9 +1114,94 @@ export function useSessionActions({
     [copy, selectedStoredSessionId, startFreshSessionDraft]
   )
 
+  const branchStoredSession = useCallback(
+    async (storedSessionId: string, sessionProfile?: string | null): Promise<boolean> => {
+      clearNotifications()
+
+      const stored = $sessions.get().find(session => sessionMatchesStoredId(session, storedSessionId))
+      const profile = sessionProfile ?? stored?.profile
+
+      try {
+        await ensureGatewayProfile(profile)
+        const { messages } = await getSessionMessages(storedSessionId, profile)
+        const branchMessages = toBranchMessages(toChatMessages(messages))
+
+        if (!branchMessages.length) {
+          notify({
+            kind: 'warning',
+            title: copy.nothingToBranch,
+            message: copy.branchNoText
+          })
+
+          return false
+        }
+
+        const cwd = stored?.cwd?.trim() ?? $currentCwd.get().trim()
+
+        const branched = await requestGateway<SessionCreateResponse>('session.create', {
+          cols: 96,
+          ...(cwd && { cwd }),
+          messages: branchMessages.map(({ content, role }) => ({ content, role })),
+          title: copy.branchTitle(branchMessages.length)
+        })
+
+        const routedSessionId = branched.stored_session_id ?? branched.session_id
+        const preview = branchMessages.map(({ content }) => content).find(Boolean) ?? null
+
+        setFreshDraftReady(false)
+        upsertOptimisticSession(branched, routedSessionId, copy.branchTitle(branchMessages.length), preview)
+        ensureSessionState(branched.session_id, routedSessionId)
+        setActiveSessionId(branched.session_id)
+        activeSessionIdRef.current = branched.session_id
+        updateSessionState(
+          branched.session_id,
+          state => ({
+            ...state,
+            messages: branchMessages.map(({ source }) => source),
+            busy: false,
+            awaitingResponse: false
+          }),
+          routedSessionId
+        )
+        setSelectedStoredSessionId(routedSessionId)
+        selectedStoredSessionIdRef.current = routedSessionId
+        navigate(sessionRoute(routedSessionId))
+
+        const runtimeInfo = applyRuntimeInfo(branched.info)
+
+        patchSessionWorkspace(routedSessionId, runtimeInfo?.cwd)
+
+        if (runtimeInfo) {
+          updateSessionState(branched.session_id, state => ({ ...state, ...runtimeInfo }), routedSessionId)
+        }
+
+        return true
+      } catch (err) {
+        notifyError(err, copy.branchFailed)
+
+        return false
+      } finally {
+        window.setTimeout(() => {
+          creatingSessionRef.current = false
+        }, 0)
+      }
+    },
+    [
+      activeSessionIdRef,
+      copy,
+      creatingSessionRef,
+      ensureSessionState,
+      navigate,
+      requestGateway,
+      selectedStoredSessionIdRef,
+      updateSessionState
+    ]
+  )
+
   return {
     archiveSession,
     branchCurrentSession,
+    branchStoredSession,
     closeSettings,
     createBackendSessionForSend,
     openSettings,
