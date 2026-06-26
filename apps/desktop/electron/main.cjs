@@ -5,25 +5,6 @@ var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
 var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __esm = (fn, res, err) => function __init() {
-  if (err) throw err[0];
-  try {
-    return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
-  } catch (e) {
-    throw err = [e], e;
-  }
-};
-var __commonJS = (cb, mod) => function __require() {
-  try {
-    return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
-  } catch (e) {
-    throw mod = 0, e;
-  }
-};
-var __export = (target, all) => {
-  for (var name in all)
-    __defProp(target, name, { get: all[name], enumerable: true });
-};
 var __copyProps = (to, from, except, desc) => {
   if (from && typeof from === "object" || typeof from === "function") {
     for (let key of __getOwnPropNames(from))
@@ -40,9 +21,50 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
   mod
 ));
-var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// electron/bootstrap-platform.cjs
+// electron/main.cjs
+var __create2 = Object.create;
+var __defProp2 = Object.defineProperty;
+var __getOwnPropDesc2 = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames2 = Object.getOwnPropertyNames;
+var __getProtoOf2 = Object.getPrototypeOf;
+var __hasOwnProp2 = Object.prototype.hasOwnProperty;
+var __esm = (fn, res, err) => function __init() {
+  if (err) throw err[0];
+  try {
+    return fn && (res = (0, fn[__getOwnPropNames2(fn)[0]])(fn = 0)), res;
+  } catch (e) {
+    throw err = [e], e;
+  }
+};
+var __commonJS = (cb, mod) => function __require() {
+  try {
+    return mod || (0, cb[__getOwnPropNames2(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+  } catch (e) {
+    throw mod = 0, e;
+  }
+};
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp2(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps2 = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames2(from))
+      if (!__hasOwnProp2.call(to, key) && key !== except)
+        __defProp2(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc2(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toESM2 = (mod, isNodeMode, target) => (target = mod != null ? __create2(__getProtoOf2(mod)) : {}, __copyProps2(
+  // If the importer is in node compatibility mode or this is not an ESM
+  // file that has been converted to a CommonJS file using a Babel-
+  // compatible transform (i.e. "__esModule" has not been set), then set
+  // "default" to the CommonJS "module.exports" for node compatibility.
+  isNodeMode || !mod || !mod.__esModule ? __defProp2(target, "default", { value: mod, enumerable: true }) : target,
+  mod
+));
+var __toCommonJS = (mod) => __copyProps2(__defProp2({}, "__esModule", { value: true }), mod);
 var require_bootstrap_platform = __commonJS({
   "electron/bootstrap-platform.cjs"(exports2, module2) {
     "use strict";
@@ -95,8 +117,6 @@ var require_bootstrap_platform = __commonJS({
     };
   }
 });
-
-// electron/bootstrap-runner.cjs
 var require_bootstrap_runner = __commonJS({
   "electron/bootstrap-runner.cjs"(exports2, module2) {
     "use strict";
@@ -646,8 +666,6 @@ ${result.stdout}`
     };
   }
 });
-
-// electron/session-windows.cjs
 var require_session_windows = __commonJS({
   "electron/session-windows.cjs"(exports2, module2) {
     "use strict";
@@ -722,8 +740,6 @@ var require_session_windows = __commonJS({
     };
   }
 });
-
-// electron/backend-probes.cjs
 var require_backend_probes = __commonJS({
   "electron/backend-probes.cjs"(exports2, module2) {
     "use strict";
@@ -763,8 +779,6 @@ var require_backend_probes = __commonJS({
     };
   }
 });
-
-// electron/link-title-window.cjs
 var require_link_title_window = __commonJS({
   "electron/link-title-window.cjs"(exports2, module2) {
     "use strict";
@@ -795,8 +809,6 @@ var require_link_title_window = __commonJS({
     module2.exports = { createLinkTitleWindow: createLinkTitleWindow2, linkTitleWindowOptions };
   }
 });
-
-// electron/gateway-ws-probe.cjs
 var require_gateway_ws_probe = __commonJS({
   "electron/gateway-ws-probe.cjs"(exports2, module2) {
     "use strict";
@@ -923,8 +935,6 @@ var require_gateway_ws_probe = __commonJS({
     };
   }
 });
-
-// electron/dashboard-token.cjs
 var require_dashboard_token = __commonJS({
   "electron/dashboard-token.cjs"(exports2, module2) {
     "use strict";
@@ -994,8 +1004,6 @@ var require_dashboard_token = __commonJS({
     };
   }
 });
-
-// electron/backend-ready.cjs
 var require_backend_ready = __commonJS({
   "electron/backend-ready.cjs"(exports2, module2) {
     "use strict";
@@ -1119,8 +1127,6 @@ var require_backend_ready = __commonJS({
     };
   }
 });
-
-// electron/oauth-net-request.cjs
 var require_oauth_net_request = __commonJS({
   "electron/oauth-net-request.cjs"(exports2, module2) {
     "use strict";
@@ -1136,8 +1142,6 @@ var require_oauth_net_request = __commonJS({
     };
   }
 });
-
-// electron/vscode-marketplace.cjs
 var require_vscode_marketplace = __commonJS({
   "electron/vscode-marketplace.cjs"(exports2, module2) {
     "use strict";
@@ -1366,8 +1370,6 @@ var require_vscode_marketplace = __commonJS({
     };
   }
 });
-
-// electron/backend-env.cjs
 var require_backend_env = __commonJS({
   "electron/backend-env.cjs"(exports2, module2) {
     "use strict";
@@ -1465,8 +1467,6 @@ var require_backend_env = __commonJS({
     };
   }
 });
-
-// electron/windows-user-env.cjs
 var require_windows_user_env = __commonJS({
   "electron/windows-user-env.cjs"(exports2, module2) {
     "use strict";
@@ -1514,8 +1514,6 @@ var require_windows_user_env = __commonJS({
     };
   }
 });
-
-// electron/wsl-clipboard-image.cjs
 var require_wsl_clipboard_image = __commonJS({
   "electron/wsl-clipboard-image.cjs"(exports2, module2) {
     "use strict";
@@ -1582,8 +1580,6 @@ var require_wsl_clipboard_image = __commonJS({
     };
   }
 });
-
-// electron/titlebar-overlay-width.cjs
 var require_titlebar_overlay_width = __commonJS({
   "electron/titlebar-overlay-width.cjs"(exports2, module2) {
     "use strict";
@@ -1594,8 +1590,6 @@ var require_titlebar_overlay_width = __commonJS({
     module2.exports = { OVERLAY_FALLBACK_WIDTH, nativeOverlayWidth };
   }
 });
-
-// electron/hardening.cjs
 var require_hardening = __commonJS({
   "electron/hardening.cjs"(exports2, module2) {
     "use strict";
@@ -1820,8 +1814,6 @@ var require_hardening = __commonJS({
     };
   }
 });
-
-// electron/fs-read-dir.cjs
 var require_fs_read_dir = __commonJS({
   "electron/fs-read-dir.cjs"(exports2, module2) {
     "use strict";
@@ -1911,8 +1903,6 @@ var require_fs_read_dir = __commonJS({
     };
   }
 });
-
-// electron/update-marker.cjs
 var require_update_marker = __commonJS({
   "electron/update-marker.cjs"(exports2, module2) {
     "use strict";
@@ -1961,8 +1951,6 @@ var require_update_marker = __commonJS({
     };
   }
 });
-
-// electron/update-relaunch.cjs
 var require_update_relaunch = __commonJS({
   "electron/update-relaunch.cjs"(exports2, module2) {
     "use strict";
@@ -2099,8 +2087,6 @@ exec ${shellQuote2(execPath)}${quotedArgs ? " " + quotedArgs : ""}
     };
   }
 });
-
-// electron/git-root.cjs
 var require_git_root = __commonJS({
   "electron/git-root.cjs"(exports2, module2) {
     "use strict";
@@ -2147,8 +2133,6 @@ var require_git_root = __commonJS({
     };
   }
 });
-
-// electron/git-worktree-ops.cjs
 var require_git_worktree_ops = __commonJS({
   "electron/git-worktree-ops.cjs"(exports2, module2) {
     "use strict";
@@ -2397,8 +2381,6 @@ var require_git_worktree_ops = __commonJS({
     };
   }
 });
-
-// ../../node_modules/ms/index.js
 var require_ms = __commonJS({
   "../../node_modules/ms/index.js"(exports2, module2) {
     var s = 1e3;
@@ -2513,8 +2495,6 @@ var require_ms = __commonJS({
     }
   }
 });
-
-// ../../node_modules/debug/src/common.js
 var require_common = __commonJS({
   "../../node_modules/debug/src/common.js"(exports2, module2) {
     function setup(env2) {
@@ -2690,8 +2670,6 @@ var require_common = __commonJS({
     module2.exports = setup;
   }
 });
-
-// ../../node_modules/debug/src/browser.js
 var require_browser = __commonJS({
   "../../node_modules/debug/src/browser.js"(exports2, module2) {
     exports2.formatArgs = formatArgs;
@@ -2860,8 +2838,6 @@ var require_browser = __commonJS({
     };
   }
 });
-
-// ../../node_modules/supports-color/index.js
 var supports_color_exports = {};
 __export(supports_color_exports, {
   createSupportsColor: () => createSupportsColor,
@@ -2990,12 +2966,18 @@ function createSupportsColor(stream, options = {}) {
   });
   return translateLevel(level);
 }
-var import_node_process, import_node_os, import_node_tty, env, flagForceColor, supportsColor, supports_color_default;
+var import_node_process;
+var import_node_os;
+var import_node_tty;
+var env;
+var flagForceColor;
+var supportsColor;
+var supports_color_default;
 var init_supports_color = __esm({
   "../../node_modules/supports-color/index.js"() {
-    import_node_process = __toESM(require("node:process"), 1);
-    import_node_os = __toESM(require("node:os"), 1);
-    import_node_tty = __toESM(require("node:tty"), 1);
+    import_node_process = __toESM2(require("node:process"), 1);
+    import_node_os = __toESM2(require("node:os"), 1);
+    import_node_tty = __toESM2(require("node:tty"), 1);
     ({ env } = import_node_process.default);
     if (hasFlag("no-color") || hasFlag("no-colors") || hasFlag("color=false") || hasFlag("color=never")) {
       flagForceColor = 0;
@@ -3009,8 +2991,6 @@ var init_supports_color = __esm({
     supports_color_default = supportsColor;
   }
 });
-
-// ../../node_modules/debug/src/node.js
 var require_node = __commonJS({
   "../../node_modules/debug/src/node.js"(exports2, module2) {
     var tty2 = require("tty");
@@ -3183,8 +3163,6 @@ var require_node = __commonJS({
     };
   }
 });
-
-// ../../node_modules/debug/src/index.js
 var require_src = __commonJS({
   "../../node_modules/debug/src/index.js"(exports2, module2) {
     if (typeof process === "undefined" || process.type === "renderer" || process.browser === true || process.__nwjs) {
@@ -3194,8 +3172,6 @@ var require_src = __commonJS({
     }
   }
 });
-
-// ../../node_modules/@kwsites/file-exists/dist/src/index.js
 var require_src2 = __commonJS({
   "../../node_modules/@kwsites/file-exists/dist/src/index.js"(exports2) {
     "use strict";
@@ -3238,8 +3214,6 @@ var require_src2 = __commonJS({
     exports2.READABLE = exports2.FILE + exports2.FOLDER;
   }
 });
-
-// ../../node_modules/@kwsites/file-exists/dist/index.js
 var require_dist = __commonJS({
   "../../node_modules/@kwsites/file-exists/dist/index.js"(exports2) {
     "use strict";
@@ -3250,8 +3224,6 @@ var require_dist = __commonJS({
     __export2(require_src2());
   }
 });
-
-// ../../node_modules/@simple-git/args-pathspec/dist/index.cjs
 var require_dist2 = __commonJS({
   "../../node_modules/@simple-git/args-pathspec/dist/index.cjs"(exports2) {
     "use strict";
@@ -3272,8 +3244,6 @@ var require_dist2 = __commonJS({
     exports2.toPaths = r;
   }
 });
-
-// ../../node_modules/@simple-git/argv-parser/dist/index.cjs
 var require_dist3 = __commonJS({
   "../../node_modules/@simple-git/argv-parser/dist/index.cjs"(exports2) {
     "use strict";
@@ -3501,8 +3471,6 @@ var require_dist3 = __commonJS({
     exports2.vulnerabilityCheck = ee;
   }
 });
-
-// ../../node_modules/@kwsites/promise-deferred/dist/index.js
 var require_dist4 = __commonJS({
   "../../node_modules/@kwsites/promise-deferred/dist/index.js"(exports2) {
     "use strict";
@@ -3543,44 +3511,42 @@ var require_dist4 = __commonJS({
     exports2.default = deferred;
   }
 });
-
-// ../../node_modules/simple-git/dist/cjs/index.js
 var require_cjs = __commonJS({
   "../../node_modules/simple-git/dist/cjs/index.js"(exports2, module2) {
     "use strict";
-    var __create2 = Object.create;
-    var __defProp2 = Object.defineProperty;
-    var __getOwnPropDesc2 = Object.getOwnPropertyDescriptor;
-    var __getOwnPropNames2 = Object.getOwnPropertyNames;
-    var __getProtoOf2 = Object.getPrototypeOf;
-    var __hasOwnProp2 = Object.prototype.hasOwnProperty;
+    var __create22 = Object.create;
+    var __defProp22 = Object.defineProperty;
+    var __getOwnPropDesc22 = Object.getOwnPropertyDescriptor;
+    var __getOwnPropNames22 = Object.getOwnPropertyNames;
+    var __getProtoOf22 = Object.getPrototypeOf;
+    var __hasOwnProp22 = Object.prototype.hasOwnProperty;
     var __esm2 = (fn, res) => function __init() {
-      return fn && (res = (0, fn[__getOwnPropNames2(fn)[0]])(fn = 0)), res;
+      return fn && (res = (0, fn[__getOwnPropNames22(fn)[0]])(fn = 0)), res;
     };
     var __commonJS2 = (cb, mod) => function __require() {
-      return mod || (0, cb[__getOwnPropNames2(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+      return mod || (0, cb[__getOwnPropNames22(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
     };
     var __export2 = (target, all) => {
       for (var name in all)
-        __defProp2(target, name, { get: all[name], enumerable: true });
+        __defProp22(target, name, { get: all[name], enumerable: true });
     };
-    var __copyProps2 = (to, from, except, desc) => {
+    var __copyProps22 = (to, from, except, desc) => {
       if (from && typeof from === "object" || typeof from === "function") {
-        for (let key of __getOwnPropNames2(from))
-          if (!__hasOwnProp2.call(to, key) && key !== except)
-            __defProp2(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc2(from, key)) || desc.enumerable });
+        for (let key of __getOwnPropNames22(from))
+          if (!__hasOwnProp22.call(to, key) && key !== except)
+            __defProp22(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc22(from, key)) || desc.enumerable });
       }
       return to;
     };
-    var __toESM2 = (mod, isNodeMode, target) => (target = mod != null ? __create2(__getProtoOf2(mod)) : {}, __copyProps2(
+    var __toESM22 = (mod, isNodeMode, target) => (target = mod != null ? __create22(__getProtoOf22(mod)) : {}, __copyProps22(
       // If the importer is in node compatibility mode or this is not an ESM
       // file that has been converted to a CommonJS file using a Babel-
       // compatible transform (i.e. "__esModule" has not been set), then set
       // "default" to the CommonJS "module.exports" for node compatibility.
-      isNodeMode || !mod || !mod.__esModule ? __defProp2(target, "default", { value: mod, enumerable: true }) : target,
+      isNodeMode || !mod || !mod.__esModule ? __defProp22(target, "default", { value: mod, enumerable: true }) : target,
       mod
     ));
-    var __toCommonJS2 = (mod) => __copyProps2(__defProp2({}, "__esModule", { value: true }), mod);
+    var __toCommonJS2 = (mod) => __copyProps22(__defProp22({}, "__esModule", { value: true }), mod);
     var GitError;
     var init_git_error = __esm2({
       "src/lib/errors/git-error.ts"() {
@@ -5154,7 +5120,7 @@ var require_cjs = __commonJS({
     var init_git_logger = __esm2({
       "src/lib/git-logger.ts"() {
         "use strict";
-        import_debug = __toESM2(require_src());
+        import_debug = __toESM22(require_src());
         init_utils();
         import_debug.default.formatters.L = (value) => String(filterHasLength(value) ? value.length : "-");
         import_debug.default.formatters.B = (value) => {
@@ -8343,8 +8309,6 @@ var require_cjs = __commonJS({
     module2.exports = Object.assign(simpleGit, { gitP: gitP2, simpleGit });
   }
 });
-
-// electron/git-review-ops.cjs
 var require_git_review_ops = __commonJS({
   "electron/git-review-ops.cjs"(exports2, module2) {
     "use strict";
@@ -8825,8 +8789,6 @@ ${visible.map((p) => `#   ${p}`).join("\n")}
     };
   }
 });
-
-// electron/git-repo-scan.cjs
 var require_git_repo_scan = __commonJS({
   "electron/git-repo-scan.cjs"(exports2, module2) {
     "use strict";
@@ -8886,8 +8848,6 @@ var require_git_repo_scan = __commonJS({
     module2.exports = { scanGitRepos: scanGitRepos2 };
   }
 });
-
-// electron/update-remote.cjs
 var require_update_remote = __commonJS({
   "electron/update-remote.cjs"(exports2, module2) {
     "use strict";
@@ -8927,8 +8887,6 @@ var require_update_remote = __commonJS({
     };
   }
 });
-
-// electron/update-count.cjs
 var require_update_count = __commonJS({
   "electron/update-count.cjs"(exports2, module2) {
     "use strict";
@@ -8945,8 +8903,6 @@ var require_update_count = __commonJS({
     module2.exports = { resolveBehindCount: resolveBehindCount2, shouldCountCommits: shouldCountCommits2 };
   }
 });
-
-// electron/update-rebuild.cjs
 var require_update_rebuild = __commonJS({
   "electron/update-rebuild.cjs"(exports2, module2) {
     "use strict";
@@ -8963,8 +8919,6 @@ var require_update_rebuild = __commonJS({
     module2.exports = { shouldRetryRebuild, runRebuildWithRetry: runRebuildWithRetry2 };
   }
 });
-
-// electron/desktop-uninstall.cjs
 var require_desktop_uninstall = __commonJS({
   "electron/desktop-uninstall.cjs"(exports2, module2) {
     "use strict";
@@ -9100,8 +9054,6 @@ var require_desktop_uninstall = __commonJS({
     };
   }
 });
-
-// electron/workspace-cwd.cjs
 var require_workspace_cwd = __commonJS({
   "electron/workspace-cwd.cjs"(exports2, module2) {
     "use strict";
@@ -9131,8 +9083,6 @@ var require_workspace_cwd = __commonJS({
     module2.exports = { isPackagedInstallPath: isPackagedInstallPath2 };
   }
 });
-
-// electron/window-state.cjs
 var require_window_state = __commonJS({
   "electron/window-state.cjs"(exports2, module2) {
     "use strict";
@@ -9213,8 +9163,6 @@ var require_window_state = __commonJS({
     };
   }
 });
-
-// electron/connection-config.cjs
 var require_connection_config = __commonJS({
   "electron/connection-config.cjs"(exports2, module2) {
     "use strict";
@@ -9357,8 +9305,6 @@ var require_connection_config = __commonJS({
     };
   }
 });
-
-// electron/main.cjs
 var {
   app,
   BrowserWindow,
