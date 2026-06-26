@@ -807,7 +807,6 @@ def switch_model(
     resolved_alias = ""
     new_model = raw_input.strip()
     target_provider = current_provider
-    resolved_moa_preset = False
 
     # =================================================================
     # PATH A: Explicit --provider given
@@ -844,14 +843,6 @@ def switch_model(
             )
 
         target_provider = pdef.id
-        if target_provider == "moa" and not new_model:
-            try:
-                from hermes_cli.config import load_config
-                from hermes_cli.moa_config import normalize_moa_config
-
-                new_model = normalize_moa_config(load_config().get("moa") or {})["default_preset"]
-            except Exception:
-                new_model = "default"
 
         # Guard against silent aggregator hops. A vendor name like bare
         # "openai" is an alias that resolves to an aggregator ("openrouter").
@@ -934,28 +925,10 @@ def switch_model(
     # PATH B: No explicit provider — resolve from model input
     # =================================================================
     else:
-        try:
-            from hermes_cli.config import load_config
-            from hermes_cli.moa_config import exact_moa_preset_name, normalize_moa_config
-
-            _moa_cfg = normalize_moa_config(load_config().get("moa") or {})
-            _moa_match = exact_moa_preset_name(_moa_cfg, raw_input)
-            if _moa_match:
-                target_provider = "moa"
-                new_model = _moa_match
-                resolved_alias = ""
-                resolved_moa_preset = True
-                alias_result = None
-            else:
-                alias_result = resolve_alias(raw_input, current_provider)
-        except Exception:
-            alias_result = resolve_alias(raw_input, current_provider)
-
         # --- Step a: Try alias resolution on current provider ---
+        alias_result = resolve_alias(raw_input, current_provider)
 
-        if resolved_moa_preset:
-            pass
-        elif alias_result is not None:
+        if alias_result is not None:
             target_provider, new_model, resolved_alias = alias_result
             logger.debug(
                 "Alias '%s' resolved to %s on %s",
@@ -988,7 +961,7 @@ def switch_model(
                             f"Try specifying the full model name."
                         ),
                     )
-            elif not resolved_moa_preset:
+            else:
                 # --- Step c: On aggregator, convert vendor:model to vendor/model ---
                 # Only convert when there's no slash — a slash means the name
                 # is already in vendor/model format and the colon is a variant
