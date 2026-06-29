@@ -1,8 +1,7 @@
-import type { ConnectionState, GatewayEvent } from '@hermes/shared'
+import { type ConnectionState, type GatewayEvent, resolveGatewayWsUrl } from '@hermes/shared'
 import { atom } from 'nanostores'
 
 import { HermesGateway } from '@/hermes'
-import { resolveGatewayWsUrl } from '@/lib/gateway-ws-url'
 import { $attentionSessionIds, $sessions, $workingSessionIds, setGatewayState } from '@/store/session'
 
 // ── Multi-profile gateway routing ──────────────────────────────────────────
@@ -260,31 +259,24 @@ export function touchSecondaryGateways(): void {
   }
 }
 
-// Touch every profile that still has a running or blocked session, even when
-// its secondary socket was never opened or the user is focused elsewhere. The
-// main-process idle reaper only sees lastActiveAt — without this, a background
-// turn on another profile can be SIGTERM'd after POOL_IDLE_MS.
+// Touch every profile still running a blocked session, even when a
+// secondary socket was never opened because the user is focused elsewhere.
 export function touchWorkingProfileBackends(): void {
   const desktop = window.hermesDesktop
-
   if (!desktop) {
     return
   }
 
   const live = new Set([...$workingSessionIds.get(), ...$attentionSessionIds.get()])
   const touched = new Set<string>()
-
   for (const session of $sessions.get()) {
     if (!live.has(session.id)) {
       continue
     }
-
     const key = normKey(session.profile)
-
     if (touched.has(key)) {
       continue
     }
-
     touched.add(key)
     void desktop.touchBackend?.(key).catch(() => undefined)
   }
