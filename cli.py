@@ -3562,7 +3562,20 @@ class HermesCLI(CLIAgentSetupMixin, CLICommandsMixin):
         _model_config = CLI_CONFIG.get("model", {})
         _config_model = (_model_config.get("default") or _model_config.get("model") or "") if isinstance(_model_config, dict) else (_model_config or "")
         _DEFAULT_CONFIG_MODEL = ""
-        self.model = model or _config_model or _DEFAULT_CONFIG_MODEL
+        # If the user explicitly chose a provider on the CLI but didn't pass
+        # --model, fall back to that provider's `default_model` from
+        # `providers.<name>.default_model` in config.yaml. Otherwise the global
+        # model.default leaks in and gets sent to a provider that doesn't know
+        # it (e.g. `--provider longcat` with `default: hy3-preview`).
+        _explicit_provider_arg = provider
+        _provider_default_model = ""
+        if _explicit_provider_arg and _explicit_provider_arg not in ("auto", "default"):
+            _providers_cfg = CLI_CONFIG.get("providers") or {}
+            if isinstance(_providers_cfg, dict):
+                _pentry = _providers_cfg.get(_explicit_provider_arg) or {}
+                if isinstance(_pentry, dict):
+                    _provider_default_model = (str(_pentry.get("default_model") or "").strip())
+        self.model = model or _provider_default_model or _config_model or _DEFAULT_CONFIG_MODEL
         # Read max_tokens from config (env var override: HERMES_MAX_TOKENS)
         _env_mt = os.environ.get("HERMES_MAX_TOKENS")
         if _env_mt:
