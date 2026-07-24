@@ -2,7 +2,8 @@ import { type ConnectionState, type GatewayEvent, resolveGatewayWsUrl } from '@h
 import { atom } from 'nanostores'
 
 import { HermesGateway } from '@/hermes'
-import { $attentionSessionIds, $sessions, $workingSessionIds, setGatewayState } from '@/store/session'
+import { $sessions, setGatewayState } from '@/store/session'
+import { $attentionSessionIds, $workingSessionIds } from '@/store/session-states'
 
 // ── Multi-profile gateway routing ──────────────────────────────────────────
 // Concurrent sessions across profiles need concurrent sockets: the renderer's
